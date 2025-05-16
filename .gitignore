@@ -1,3 +1,4 @@
-data/*
-
+data/042025/*
+lightning_logs/
 .vscode/
+dvRespCNN/__pycache__/
