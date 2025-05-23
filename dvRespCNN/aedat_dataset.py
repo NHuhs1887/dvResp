@@ -47,12 +47,14 @@ class AEDATRespirationDataset(Dataset):
                 distance = parts[2].replace(",", ".")
                 reading = int(parts[-1].replace(".aedat4", ""))
                 key = (patient, distance, reading)
+                events = read_aedat4(path)  
                 if key in self.label_map:
                     self.files.append(path)
                 else:
                     print(f"Skipping {basename}: No matching GT RR")
             except Exception:
                 # skip files that don't match naming convention
+                print(f"Failed to read data, skipping.")
                 continue
 
         # Frame transform
@@ -88,10 +90,9 @@ class AEDATRespirationDataset(Dataset):
         reading = int(parts[-1].replace(".aedat4", ""))
 
         # Read raw events and convert to frames
+
         events = read_aedat4(path)              # numpy structured array
-        if len(events) == 0:
-            print(f"Warning: No events in file {path}, skipping.")
-            return None  # or however you skip samples
+
         frames_np = self.transform(events, events[0][0])      # shape (T, H, W) or (T, H, W, C)
         # Convert to torch.Tensor and ensure float type
         frames = torch.from_numpy(frames_np).float()

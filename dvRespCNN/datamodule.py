@@ -6,11 +6,13 @@ import torch
 class AEDATDataModule(pl.LightningDataModule):
     def __init__(self, data_dir="data/042025",
                  csv_path="data/ground_truth.csv",
-                 batch_size=8):
+                 batch_size=8,
+                 frames_per_sample = 150):
         super().__init__()
         self.data_dir = data_dir
         self.csv_path = csv_path
         self.batch_size = batch_size
+        self.frames_per_sample = frames_per_sample
 
     def setup(self, stage=None):
         self.dataset = AEDATRespirationDataset(
@@ -32,11 +34,11 @@ class AEDATDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(self.train_dataset,
                           batch_size=self.batch_size,
-                          shuffle=True)
+                          shuffle=True, num_workers=0)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset,
-                          batch_size=self.batch_size)
+                          batch_size=self.batch_size,num_workers=0)
     def test_dataloader(self):
         return DataLoader(self.test_dataset,
-                        batch_size=self.batch_size)
+                        batch_size=self.batch_size,num_workers=0)
