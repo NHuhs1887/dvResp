@@ -14,11 +14,14 @@ class AEDATRespirationDataset(Dataset):
                  data_dir: str,
                  csv_path: str,
                  sensor_size=(640, 480, 2),
-                 frames_per_sample=32):
+                 frames_per_sample=900):
+
         """
         Dataset for AEDAT4 event files paired with GT respiration rates.
         Only files with a matching GT RR in the CSV are kept.
         """
+        self.sensor_size = sensor_size
+        self.frames_per_sample=frames_per_sample
         # Load and normalize CSV labels
         df = pd.read_csv(csv_path)
         df["Distance"] = df["Distance"].str.replace(",", ".")
@@ -41,20 +44,37 @@ class AEDATRespirationDataset(Dataset):
             parts = basename.split("_")
             try:
                 patient = int(parts[1])
-                distance = parts[2]
+                distance = parts[2].replace(",", ".")
                 reading = int(parts[-1].replace(".aedat4", ""))
                 key = (patient, distance, reading)
                 if key in self.label_map:
                     self.files.append(path)
+                else:
+                    print(f"Skipping {basename}: No matching GT RR")
             except Exception:
                 # skip files that don't match naming convention
                 continue
 
         # Frame transform
-        self.transform = transforms.ToFrame(
-            sensor_size=sensor_size,
-            n_time_bins=frames_per_sample
+        # self.transform = transforms.ToFrame(
+        #     sensor_size=sensor_size,
+        #     n_time_bins=frames_per_sample
+        # )
+        
+
+        
+    def transform(self, events, starttime):
+        transform =    transforms.Compose(
+            [
+                #transforms.CropTime(max = starttime + 5000000000),
+                #transforms.Denoise(filter_time=1000),
+                transforms.ToFrame(
+                    sensor_size=self.sensor_size,
+                    n_time_bins=self.frames_per_sample
+                ),
+            ]
         )
+        return transform(events)
 
     def __len__(self):
         return len(self.files)
@@ -64,12 +84,12 @@ class AEDATRespirationDataset(Dataset):
         basename = os.path.basename(path)
         parts = basename.split("_")
         patient = int(parts[1])
-        distance = parts[2]
+        distance = parts[2].replace(",", ".")
         reading = int(parts[-1].replace(".aedat4", ""))
 
         # Read raw events and convert to frames
         events = read_aedat4(path)              # numpy structured array
-        frames_np = self.transform(events)      # shape (T, H, W) or (T, H, W, C)
+        frames_np = self.transform(events, events[0][0])      # shape (T, H, W) or (T, H, W, C)
         # Convert to torch.Tensor and ensure float type
         frames = torch.from_numpy(frames_np).float()
         # Ensure shape is (C, T, H, W)
