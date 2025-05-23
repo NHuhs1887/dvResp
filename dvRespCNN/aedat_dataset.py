@@ -89,6 +89,9 @@ class AEDATRespirationDataset(Dataset):
 
         # Read raw events and convert to frames
         events = read_aedat4(path)              # numpy structured array
+        if len(events) == 0:
+            print(f"Warning: No events in file {path}, skipping.")
+            return None  # or however you skip samples
         frames_np = self.transform(events, events[0][0])      # shape (T, H, W) or (T, H, W, C)
         # Convert to torch.Tensor and ensure float type
         frames = torch.from_numpy(frames_np).float()
