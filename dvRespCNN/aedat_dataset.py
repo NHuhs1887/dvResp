@@ -14,7 +14,8 @@ class AEDATRespirationDataset(Dataset):
                  data_dir: str,
                  csv_path: str,
                  sensor_size=(640, 480, 2),
-                 frames_per_sample=900):
+                 frames_per_sample=900,
+                filtered = True):
 
         """
         Dataset for AEDAT4 event files paired with GT respiration rates.
@@ -22,6 +23,7 @@ class AEDATRespirationDataset(Dataset):
         """
         self.sensor_size = sensor_size
         self.frames_per_sample=frames_per_sample
+        self.filtered=filtered
         # Load and normalize CSV labels
         df = pd.read_csv(csv_path)
         df["Distance"] = df["Distance"].str.replace(",", ".")
@@ -42,9 +44,21 @@ class AEDATRespirationDataset(Dataset):
         for path in all_files:
             basename = os.path.basename(path)
             parts = basename.split("_")
+            if self.filtered:
+                if not 'filtered' in parts[-1]:
+                    continue
+            
+            if 'filtered.aedat4' in parts:
+                print('removing')
+                parts.remove('filtered.aedat4')
+                
+            if 'filtered2.aedat4' in parts:
+                parts.remove('filtered2.aedat4')
+
             try:
                 patient = int(parts[1])
                 distance = parts[2].replace(",", ".")
+                print(parts)
                 reading = int(parts[-1].replace(".aedat4", ""))
                 key = (patient, distance, reading)
                 events = read_aedat4(path)  
@@ -54,6 +68,7 @@ class AEDATRespirationDataset(Dataset):
                     print(f"Skipping {basename}: No matching GT RR")
             except Exception:
                 # skip files that don't match naming convention
+                print(parts)
                 print(f"Failed to read data, skipping.")
                 continue
 
@@ -69,7 +84,7 @@ class AEDATRespirationDataset(Dataset):
         transform =    transforms.Compose(
             [
                 #transforms.CropTime(max = starttime + 5000000000),
-                #transforms.Denoise(filter_time=1000),
+                transforms.Denoise(filter_time=1000),
                 transforms.ToFrame(
                     sensor_size=self.sensor_size,
                     n_time_bins=self.frames_per_sample
@@ -85,6 +100,12 @@ class AEDATRespirationDataset(Dataset):
         path = self.files[idx]
         basename = os.path.basename(path)
         parts = basename.split("_")
+        if 'filtered.aedat4' in parts:
+            parts.remove('filtered.aedat4')
+                
+                        
+        if 'filtered2.aedat4' in parts:
+            parts.remove('filtered2.aedat4')
         patient = int(parts[1])
         distance = parts[2].replace(",", ".")
         reading = int(parts[-1].replace(".aedat4", ""))

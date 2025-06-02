@@ -7,19 +7,22 @@ class AEDATDataModule(pl.LightningDataModule):
     def __init__(self, data_dir="data/042025",
                  csv_path="data/ground_truth.csv",
                  batch_size=8,
-                 frames_per_sample = 150):
+                 frames_per_sample = 150,
+                filtered = True):
         super().__init__()
         self.data_dir = data_dir
         self.csv_path = csv_path
         self.batch_size = batch_size
         self.frames_per_sample = frames_per_sample
+        self.filtered = filtered
 
     def setup(self, stage=None):
         self.dataset = AEDATRespirationDataset(
             data_dir=self.data_dir,
             csv_path=self.csv_path,
             sensor_size=(640,480,2),
-            frames_per_sample=150
+            frames_per_sample=150,
+            filtered=self.filtered
         )
         total_size = len(self.dataset)
         val_size = int(0.2 * total_size)
