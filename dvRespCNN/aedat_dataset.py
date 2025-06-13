@@ -7,6 +7,7 @@ import pandas as pd
 from torch.utils.data import Dataset
 import tonic.transforms as transforms
 from tonic.io import read_aedat4
+import matplotlib.pyplot as plt
 
 
 class AEDATRespirationDataset(Dataset):
@@ -15,7 +16,9 @@ class AEDATRespirationDataset(Dataset):
                  csv_path: str,
                  sensor_size=(640, 480, 2),
                  frames_per_sample=900,
-                filtered = True):
+                filtered = True,
+                plot_labels=False,
+                max_time = 30):
 
         """
         Dataset for AEDAT4 event files paired with GT respiration rates.
@@ -24,6 +27,7 @@ class AEDATRespirationDataset(Dataset):
         self.sensor_size = sensor_size
         self.frames_per_sample=frames_per_sample
         self.filtered=filtered
+        self.max_time=max_time
         # Load and normalize CSV labels
         df = pd.read_csv(csv_path)
         df["Distance"] = df["Distance"].str.replace(",", ".")
@@ -31,8 +35,9 @@ class AEDATRespirationDataset(Dataset):
         self.label_map = {
             (int(r.Patient), r.Distance, int(r.Reading)): float(r["GT RR"])
             for _, r in df.iterrows()
-            if pd.notna(r["GT RR"])
+            if pd.notna(r["GT RR"]) and 10.0 <= float(r["GT RR"]) <= 18.0
         }
+
 
         # Gather and filter AEDAT4 files
         all_files = sorted(
@@ -41,6 +46,8 @@ class AEDATRespirationDataset(Dataset):
             if f.endswith(".aedat4")
         )
         self.files = []
+        self.labels = []
+
         for path in all_files:
             basename = os.path.basename(path)
             parts = basename.split("_")
@@ -49,7 +56,7 @@ class AEDATRespirationDataset(Dataset):
                     continue
             
             if 'filtered.aedat4' in parts:
-                print('removing')
+                #print('removing')
                 parts.remove('filtered.aedat4')
                 
             if 'filtered2.aedat4' in parts:
@@ -58,19 +65,22 @@ class AEDATRespirationDataset(Dataset):
             try:
                 patient = int(parts[1])
                 distance = parts[2].replace(",", ".")
-                print(parts)
+                #print(parts)
                 reading = int(parts[-1].replace(".aedat4", ""))
                 key = (patient, distance, reading)
                 events = read_aedat4(path)  
                 if key in self.label_map:
                     self.files.append(path)
-                else:
-                    print(f"Skipping {basename}: No matching GT RR")
+                    self.labels.append(self.label_map[key])
+               # else:
+                    #print(f"Skipping {basename}: No matching GT RR")
             except Exception:
                 # skip files that don't match naming convention
-                print(parts)
-                print(f"Failed to read data, skipping.")
+                #print(parts)
+               # print(f"Failed to read data, skipping.")
                 continue
+        if plot_labels:
+            self.plot_label_distribution()
 
         # Frame transform
         # self.transform = transforms.ToFrame(
@@ -78,13 +88,21 @@ class AEDATRespirationDataset(Dataset):
         #     n_time_bins=frames_per_sample
         # )
         
-
+    def plot_label_distribution(self):
+        plt.figure(figsize=(6, 4))
+        plt.hist(self.labels, bins=15, color="skyblue", edgecolor="black")
+        plt.xlabel("Ground Truth Respiration Rate (bpm)")
+        plt.ylabel("Count")
+        plt.title("Distribution of Ground Truth RR Labels")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
         
-    def transform(self, events, starttime):
+    def transform(self, events):
         transform =    transforms.Compose(
             [
-                #transforms.CropTime(max = starttime + 5000000000),
-                transforms.Denoise(filter_time=1000),
+                transforms.CropTime(max = events[0][0] + self.max_time*1000000000),
+                #transforms.Denoise(filter_time=1000),
                 transforms.ToFrame(
                     sensor_size=self.sensor_size,
                     n_time_bins=self.frames_per_sample
@@ -111,10 +129,10 @@ class AEDATRespirationDataset(Dataset):
         reading = int(parts[-1].replace(".aedat4", ""))
 
         # Read raw events and convert to frames
-
+        
         events = read_aedat4(path)              # numpy structured array
-
-        frames_np = self.transform(events, events[0][0])      # shape (T, H, W) or (T, H, W, C)
+        #print(events)
+        frames_np = self.transform(events)      # shape (T, H, W) or (T, H, W, C)
         # Convert to torch.Tensor and ensure float type
         frames = torch.from_numpy(frames_np).float()
         # Ensure shape is (C, T, H, W)
@@ -128,5 +146,5 @@ class AEDATRespirationDataset(Dataset):
         key = (patient, distance, reading)
         gt_rr = self.label_map[key]
         label = torch.tensor(gt_rr, dtype=torch.float32)
-
+        #print("opening file:" + path + "with gt= " + str(gt_rr))
         return frames, label
