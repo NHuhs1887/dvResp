@@ -2,6 +2,10 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from aedat_dataset import AEDATRespirationDataset
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from torch.utils.data import Subset
 
 class AEDATDataModule(pl.LightningDataModule):
     def __init__(self, data_dir="data/042025",
@@ -51,3 +55,10 @@ class AEDATDataModule(pl.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.test_dataset,
                         batch_size=self.batch_size,num_workers=0)
+
+    def plot_distribution(self,labels, name):
+        plt.hist(labels, bins=20)
+        plt.title(f"{name} Label Distribution")
+        plt.xlabel("Label")
+        plt.ylabel("Count")
+        plt.show()

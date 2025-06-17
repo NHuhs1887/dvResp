@@ -137,7 +137,7 @@ class EventRespirationNet(pl.LightningModule):
         preds = torch.cat(self.val_preds)
         targets = torch.cat(self.val_targets)
         #plot_predictions(targets.numpy(), preds.numpy(), title="Validation: Predicted vs GT")
-        self.inspect_output_layer()
+        #self.inspect_output_layer()
         self.plot_lstm_embeddings() 
         
     def test_step(self, batch, batch_idx):
@@ -148,14 +148,14 @@ class EventRespirationNet(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr)
         scheduler = {
         "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode='min',               # minimize val_loss
             factor=0.5,               # reduce LR by half
             patience=5,               # wait 5 epochs before reducing
-            min_lr=1e-6,              # do not go below this LR
+            min_lr=1e-9,              # do not go below this LR
             verbose=True
         ),
         "monitor": "val_loss",       # what metric to monitor
