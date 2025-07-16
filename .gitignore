@@ -2,3 +2,5 @@ data/042025/*
 lightning_logs/
 .vscode/
 dvRespCNN/__pycache__/
+temp.aedat4
+dvRespCNN/models/__pycache__/
