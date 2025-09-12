@@ -35,7 +35,7 @@ class AEDATRespirationDataset(Dataset):
         self.label_map = {
             (int(r.Patient), r.Distance, int(r.Reading)): float(r["GT RR"])
             for _, r in df.iterrows()
-            if pd.notna(r["GT RR"]) and 10.0 <= float(r["GT RR"]) <= 18.0
+            if pd.notna(r["GT RR"]) and 8.0 <= float(r["GT RR"]) <= 30.0
         }
 
 
