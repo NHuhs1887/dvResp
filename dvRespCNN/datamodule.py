@@ -29,7 +29,7 @@ class AEDATDataModule(pl.LightningDataModule):
             data_dir=self.data_dir,
             csv_path=self.csv_path,
             sensor_size=(640,480,2),
-            frames_per_sample=150,
+            frames_per_sample=self.frames_per_sample,
             filtered=self.filtered,
             plot_labels = self.plot_labels,
             max_time = self.max_time
