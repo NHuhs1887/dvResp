@@ -15,7 +15,7 @@ def plot_predictions(y_true, y_pred, title="Predicted vs Ground Truth RR"):
     plt.title(title)
     plt.legend()
     plt.grid(True)
-    plt.savefig("preds.png")
+    plt.savefig("testpreds.png")
     plt.show()
 
 class Conv2Plus1D(nn.Module):

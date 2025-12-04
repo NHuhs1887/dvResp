@@ -18,7 +18,8 @@ class AEDATRespirationDataset(Dataset):
                  frames_per_sample=900,
                 filtered = True,
                 plot_labels=False,
-                max_time = 30):
+                max_time = 30,
+                distances = ['0.5m','1m','1.5m','2.0m']):
 
         """
         Dataset for AEDAT4 event files paired with GT respiration rates.
@@ -28,6 +29,7 @@ class AEDATRespirationDataset(Dataset):
         self.frames_per_sample=frames_per_sample
         self.filtered=filtered
         self.max_time=max_time
+        self.distances= distances
         # Load and normalize CSV labels
         df = pd.read_csv(csv_path)
         df["Distance"] = df["Distance"].str.replace(",", ".")
@@ -35,7 +37,7 @@ class AEDATRespirationDataset(Dataset):
         self.label_map = {
             (int(r.Patient), r.Distance, int(r.Reading)): float(r["GT RR"])
             for _, r in df.iterrows()
-            if pd.notna(r["GT RR"]) and 8.0 <= float(r["GT RR"]) <= 30.0
+            if pd.notna(r["GT RR"]) and 8.0 <= float(r["GT RR"]) <= 20.0
         }
 
 
@@ -69,15 +71,15 @@ class AEDATRespirationDataset(Dataset):
                 reading = int(parts[-1].replace(".aedat4", ""))
                 key = (patient, distance, reading)
                 events = read_aedat4(path)  
-                if key in self.label_map:
+                if key in self.label_map and distance in self.distances:
                     self.files.append(path)
                     self.labels.append(self.label_map[key])
-               # else:
-                    #print(f"Skipping {basename}: No matching GT RR")
-            except Exception:
+                else:
+                    print(f"Skipping {basename}: No matching GT RR")
+            except Exception as e:
                 # skip files that don't match naming convention
-                #print(parts)
-               # print(f"Failed to read data, skipping.")
+                print(parts)
+                print(f"Failed to read data, skipping. {e}")
                 continue
         if plot_labels:
             self.plot_label_distribution()
