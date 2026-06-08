@@ -7,16 +7,27 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset
 
+DEFAULT_DATA_DIRS = {
+    "042025": "../data/042025",
+    "042026": "../data/042026",
+}
+
+
 class AEDATDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir="data/042025",
-                 csv_path="data/ground_truth.csv",
+    def __init__(self, data_dirs=None,
+                 data_dir=None,
+                 csv_path="../data/ground_truth.csv",
                  batch_size=8,
                  frames_per_sample = 150,
                 filtered = True,
                 plot_labels= False,
                 max_time = 30):
         super().__init__()
-        self.data_dir = data_dir
+        # Accept either a {dataset_name: directory} dict (``data_dirs``) or a single
+        # directory (``data_dir``, kept for backwards compatibility).
+        if data_dirs is None:
+            data_dirs = data_dir if data_dir is not None else DEFAULT_DATA_DIRS
+        self.data_dirs = data_dirs
         self.csv_path = csv_path
         self.batch_size = batch_size
         self.frames_per_sample = frames_per_sample
@@ -26,7 +37,7 @@ class AEDATDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         self.dataset = AEDATRespirationDataset(
-            data_dir=self.data_dir,
+            data_dirs=self.data_dirs,
             csv_path=self.csv_path,
             sensor_size=(640,480,2),
             frames_per_sample=self.frames_per_sample,
